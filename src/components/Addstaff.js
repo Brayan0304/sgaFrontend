@@ -201,8 +201,8 @@ const AutoGrid = () => {
                                             <TableCell align="center">{row.fecha_nacimiento}</TableCell>
                                             <TableCell align="center">{row.municipio_expedicion}</TableCell>
                                             <TableCell align="center">{row.departamento_expedicion}</TableCell>
-                                            <TableCell align="center">{row.fecha_ingreso || '—'}</TableCell>
-                                            <TableCell align="center">{row.fecha_salida || '—'}</TableCell>
+                                            <TableCell align="center">{row.fecha_ingreso}</TableCell>
+                                            <TableCell align="center">{row.fecha_salida}</TableCell>
 
                                             <TableCell align="center">
                                                 <Button onClick={() => handleClickOpen(row)}>Editar</Button>
