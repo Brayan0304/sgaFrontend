@@ -4,6 +4,15 @@ import Button from '@mui/material/Button';
 import MenuItem from '@mui/material/MenuItem';
 import { addSalary, fetchUsers } from './api';
 
+const payOptions = [
+    'Diario',
+    'Quincenal',
+    'Mensual',
+    'Trimestral',
+    'Semestral',
+    'Anual',
+];
+
 const AddSalaryForm = ({ onSalaryAdded }) => {
     const [idEmpleado, setIdEmpleado] = useState('');
     const [salario, setSalario] = useState('');
@@ -16,7 +25,7 @@ const AddSalaryForm = ({ onSalaryAdded }) => {
         const loadStaff = async () => {
             try {
                 const data = await fetchUsers();
-                setStaffList(data);
+                setStaffList(data || []);
             } catch (error) {
                 console.error("Error al cargar los empleados:", error);
             }
@@ -26,21 +35,33 @@ const AddSalaryForm = ({ onSalaryAdded }) => {
     }, []);
 
     const handleAddSalary = async () => {
-        if (!idEmpleado || !salario || !tiempoPago) {
+        if (!idEmpleado || salario === '' || !tiempoPago) {
             setError("Todos los campos son obligatorios");
             return;
         }
 
+        const payload = {
+            id_empleado: idEmpleado, // enviar como string (no Number)
+            salario: Number(salario),
+            tiempo_pago: tiempoPago
+        };
+
         try {
-            await addSalary({ id_empleado: idEmpleado, salario, tiempo_pago: tiempoPago });
+            await addSalary(payload);
             onSalaryAdded();  // Refresca la lista de salarios después de agregar
             setIdEmpleado('');
             setSalario('');
             setTiempoPago('');
             setError('');
-        } catch (error) {
-            console.error("Error al agregar el salario:", error);
-            setError("Hubo un error al agregar el salario.");
+        } catch (err) {
+            console.error("Error al agregar el salario:", err.response?.data || err);
+            const resp = err.response?.data;
+            if (resp) {
+                const serverMessage = resp.message || (resp.errors ? Object.values(resp.errors).flat().join(', ') : JSON.stringify(resp));
+                setError(serverMessage);
+            } else {
+                setError("Hubo un error al agregar el salario.");
+            }
         }
     };
 
@@ -64,20 +85,28 @@ const AddSalaryForm = ({ onSalaryAdded }) => {
             </TextField>
             <TextField
                 label="Salario"
+                type="number"
+                inputProps={{ min: 0, step: "0.01" }}
                 value={salario}
                 onChange={(e) => setSalario(e.target.value)}
                 fullWidth
                 margin="normal"
                 required
             />
-            <TextField  
+            <TextField
+                select
                 label="Tiempo de Pago"
                 value={tiempoPago}
                 onChange={(e) => setTiempoPago(e.target.value)}
                 fullWidth
                 margin="normal"
                 required
-            />
+            >
+                <MenuItem value=""><em>Seleccionar</em></MenuItem>
+                {payOptions.map(opt => (
+                    <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                ))}
+            </TextField>
             {error && <p style={{ color: 'red' }}>{error}</p>}
             <Button variant="contained" color="primary" onClick={handleAddSalary}>
                 Agregar Salario

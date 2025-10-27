@@ -5,13 +5,13 @@ import AddSalaryForm from './AddSalaryForm';
 const SalaryManagement = () => {
     const [refresh, setRefresh] = useState(false);
 
-    const handleSalaryAdded = () => setRefresh(!refresh);
+    const handleSalaryAdded = () => setRefresh(prev => !prev);
 
     return (
         <div>
             <h2>Gestión de Salarios</h2>
             <AddSalaryForm onSalaryAdded={handleSalaryAdded} />
-            <SalaryTable key={refresh} />
+            <SalaryTable refresh={refresh} />
         </div>
     );
 };
