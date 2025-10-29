@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import {
   Grid,
@@ -79,6 +79,87 @@ const deleteReport = async (id) => {
   }
 };
 
+// Reemplazo de la definición inline de FieldRow por un componente memoizado
+const FieldRow = React.memo(function FieldRow({ label, name, sizeName, styleKey, multiline, reportData, errors, handleChange, handleStyleChange, theme }) {
+  return (
+    <Grid item xs={12}>
+      <Paper elevation={2} sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, bgcolor: theme.palette.background.paper, width: '100%' }}>
+        {/* Fila superior: campo principal + tamaño */}
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', width: '100%' }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, color: theme.palette.text.primary }}>{label}</Typography>
+            <TextField
+              name={name}
+              value={reportData[name]}
+              onChange={handleChange}
+              fullWidth
+              multiline={!!multiline}
+              rows={multiline ? 4 : 1}
+              placeholder={label}
+              error={!!errors[name]}
+              helperText={errors[name]}
+              InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
+              inputProps={{ style: { color: theme.palette.text.primary } }}
+              sx={{
+                '& .MuiInputBase-input': { fontSize: 14 },
+                bgcolor: theme.palette.action.hover,
+                '& .MuiInputBase-input::placeholder': { color: theme.palette.text.disabled },
+              }}
+            />
+          </Box>
+
+          <Box sx={{ width: 110, display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>Tamaño</Typography>
+            <TextField
+              name={sizeName}
+              value={reportData[sizeName]}
+              onChange={handleChange}
+              size="small"
+              type="number"
+              inputProps={{ min: 6, max: 72, style: { color: theme.palette.text.primary } }}
+            />
+          </Box>
+        </Box>
+
+        {/* Fila de estilo: alineación + formatos en la misma línea, debajo del campo */}
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', pt: 1, borderTop: `1px solid ${theme.palette.divider}` }}>
+          <FormControl component="fieldset" sx={{ flex: 1, minWidth: 240 }}>
+            <RadioGroup
+              row
+              name={`${styleKey}_alignment`}
+              value={reportData[styleKey]?.alignment || 'left'}
+              onChange={(e) => handleStyleChange(styleKey, 'alignment', e.target.value)}
+            >
+              <FormControlLabel sx={{ color: theme.palette.text.primary }} value="left" control={<Radio size="small" />} label="Izq" />
+              <FormControlLabel sx={{ color: theme.palette.text.primary }} value="center" control={<Radio size="small" />} label="Centrar" />
+              <FormControlLabel sx={{ color: theme.palette.text.primary }} value="right" control={<Radio size="small" />} label="Der" />
+              <FormControlLabel sx={{ color: theme.palette.text.primary }} value="justify" control={<Radio size="small" />} label="Justificar" />
+            </RadioGroup>
+          </FormControl>
+
+          <FormGroup row sx={{ gap: 2 }}>
+            <FormControlLabel
+              sx={{ color: theme.palette.text.primary }}
+              control={<Checkbox size="small" checked={!!reportData[styleKey]?.bold} onChange={(e) => handleStyleChange(styleKey, 'bold', e.target.checked)} />}
+              label="Negrilla"
+            />
+            <FormControlLabel
+              sx={{ color: theme.palette.text.primary }}
+              control={<Checkbox size="small" checked={!!reportData[styleKey]?.italic} onChange={(e) => handleStyleChange(styleKey, 'italic', e.target.checked)} />}
+              label="Cursiva"
+            />
+            <FormControlLabel
+              sx={{ color: theme.palette.text.primary }}
+              control={<Checkbox size="small" checked={!!reportData[styleKey]?.underline} onChange={(e) => handleStyleChange(styleKey, 'underline', e.target.checked)} />}
+              label="Subrayada"
+            />
+          </FormGroup>
+        </Box>
+      </Paper>
+    </Grid>
+  );
+});
+
 function ReportForm() {
   const theme = useTheme();
   const [reportData, setReportData] = useState({
@@ -122,18 +203,19 @@ function ReportForm() {
     }
   };
 
-  const handleChange = (e) => {
+  // handlers memoizados para evitar nuevas referencias en cada render
+  const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     setReportData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: undefined }));
-  };
+  }, []);
 
-  const handleStyleChange = (styleKey, field, value) => {
+  const handleStyleChange = useCallback((styleKey, field, value) => {
     setReportData((prev) => ({
       ...prev,
       [styleKey]: { ...(prev[styleKey] || {}), [field]: value },
     }));
-  };
+  }, []);
 
   const validate = () => {
     const newErrors = {};
@@ -238,85 +320,6 @@ function ReportForm() {
     };
   };
 
-  // small helper to render a row with field + size + style (sin previsualización)
-  const FieldRow = ({ label, name, sizeName, styleKey, multiline }) => (
-    <Grid item xs={12}>
-      <Paper elevation={2} sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, bgcolor: theme.palette.background.paper, width: '100%' }}>
-        {/* Fila superior: campo principal + tamaño */}
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', width: '100%' }}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="subtitle2" sx={{ mb: 1, color: theme.palette.text.primary }}>{label}</Typography>
-            <TextField
-              name={name}
-              value={reportData[name]}
-              onChange={handleChange}
-              fullWidth
-              multiline={!!multiline}
-              rows={multiline ? 4 : 1}
-              placeholder={label}
-              error={!!errors[name]}
-              helperText={errors[name]}
-              InputLabelProps={{ style: { color: theme.palette.text.secondary } }}
-              inputProps={{ style: { color: theme.palette.text.primary } }}
-              sx={{
-                '& .MuiInputBase-input': { fontSize: 14 },
-                bgcolor: theme.palette.action.hover,
-                '& .MuiInputBase-input::placeholder': { color: theme.palette.text.disabled },
-              }}
-            />
-          </Box>
-
-          <Box sx={{ width: 110, display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>Tamaño</Typography>
-            <TextField
-              name={sizeName}
-              value={reportData[sizeName]}
-              onChange={handleChange}
-              size="small"
-              type="number"
-              inputProps={{ min: 6, max: 72, style: { color: theme.palette.text.primary } }}
-            />
-          </Box>
-        </Box>
-
-        {/* Fila de estilo: alineación + formatos en la misma línea, debajo del campo */}
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', pt: 1, borderTop: `1px solid ${theme.palette.divider}` }}>
-          <FormControl component="fieldset" sx={{ flex: 1, minWidth: 240 }}>
-            <RadioGroup
-              row
-              name={`${styleKey}_alignment`}
-              value={reportData[styleKey]?.alignment || 'left'}
-              onChange={(e) => handleStyleChange(styleKey, 'alignment', e.target.value)}
-            >
-              <FormControlLabel sx={{ color: theme.palette.text.primary }} value="left" control={<Radio size="small" />} label="Izq" />
-              <FormControlLabel sx={{ color: theme.palette.text.primary }} value="center" control={<Radio size="small" />} label="Centrar" />
-              <FormControlLabel sx={{ color: theme.palette.text.primary }} value="right" control={<Radio size="small" />} label="Der" />
-              <FormControlLabel sx={{ color: theme.palette.text.primary }} value="justify" control={<Radio size="small" />} label="Justificar" />
-            </RadioGroup>
-          </FormControl>
-
-          <FormGroup row sx={{ gap: 2 }}>
-            <FormControlLabel
-              sx={{ color: theme.palette.text.primary }}
-              control={<Checkbox size="small" checked={!!reportData[styleKey]?.bold} onChange={(e) => handleStyleChange(styleKey, 'bold', e.target.checked)} />}
-              label="Negrilla"
-            />
-            <FormControlLabel
-              sx={{ color: theme.palette.text.primary }}
-              control={<Checkbox size="small" checked={!!reportData[styleKey]?.italic} onChange={(e) => handleStyleChange(styleKey, 'italic', e.target.checked)} />}
-              label="Cursiva"
-            />
-            <FormControlLabel
-              sx={{ color: theme.palette.text.primary }}
-              control={<Checkbox size="small" checked={!!reportData[styleKey]?.underline} onChange={(e) => handleStyleChange(styleKey, 'underline', e.target.checked)} />}
-              label="Subrayada"
-            />
-          </FormGroup>
-        </Box>
-      </Paper>
-    </Grid>
-  );
-
   return (
     <Box sx={{ p: 4, bgcolor: theme.palette.background.default, minHeight: '100vh' }}>
       <Typography variant="h4" gutterBottom sx={{ color: theme.palette.primary.main, fontWeight: 700 }}>Configuración de Reportes</Typography>
@@ -324,10 +327,10 @@ function ReportForm() {
       <Paper sx={{ p: 3, mb: 4, background: theme.palette.background.paper }} elevation={3}>
         <form onSubmit={handleSubmit}>
           <Grid container spacing={2}>
-            <FieldRow label="Título" name="titulo" sizeName="tamano_letra_titulo" styleKey="estilo_letra_titulo" />
-            <FieldRow label="Título 2" name="titulo_2" sizeName="tamano_letra_titulo_2" styleKey="estilo_letra_titulo_2" />
-            <FieldRow label="Párrafo" name="parrafo" sizeName="tamano_letra_parrafo" styleKey="estilo_parrafo" multiline />
-            <FieldRow label="Expedición" name="expedicion" sizeName="tamano_letra_expedicion" styleKey="estilo_expedicion" />
+            <FieldRow label="Título" name="titulo" sizeName="tamano_letra_titulo" styleKey="estilo_letra_titulo" reportData={reportData} errors={errors} handleChange={handleChange} handleStyleChange={handleStyleChange} theme={theme} />
+            <FieldRow label="Título 2" name="titulo_2" sizeName="tamano_letra_titulo_2" styleKey="estilo_letra_titulo_2" reportData={reportData} errors={errors} handleChange={handleChange} handleStyleChange={handleStyleChange} theme={theme} />
+            <FieldRow label="Párrafo" name="parrafo" sizeName="tamano_letra_parrafo" styleKey="estilo_parrafo" multiline reportData={reportData} errors={errors} handleChange={handleChange} handleStyleChange={handleStyleChange} theme={theme} />
+            <FieldRow label="Expedición" name="expedicion" sizeName="tamano_letra_expedicion" styleKey="estilo_expedicion" reportData={reportData} errors={errors} handleChange={handleChange} handleStyleChange={handleStyleChange} theme={theme} />
 
             <Grid item xs={12} md={8}>
               <Paper sx={{ p: 2, bgcolor: '#fff' }} elevation={1}>
